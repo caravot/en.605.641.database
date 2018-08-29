@@ -1,0 +1,548 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 10.4
+-- Dumped by pg_dump version 10.4
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: airplane; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.airplane (
+    airplane_id integer NOT NULL,
+    total_number_of_seats integer NOT NULL,
+    airplane_type_name character varying(125) NOT NULL,
+    CONSTRAINT airplane_total_number_of_seats_check CHECK (((total_number_of_seats > 0) AND (total_number_of_seats <= 600)))
+);
+
+
+ALTER TABLE public.airplane OWNER TO carrie;
+
+--
+-- Name: airplane_airplane_id_seq; Type: SEQUENCE; Schema: public; Owner: carrie
+--
+
+CREATE SEQUENCE public.airplane_airplane_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.airplane_airplane_id_seq OWNER TO carrie;
+
+--
+-- Name: airplane_airplane_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: carrie
+--
+
+ALTER SEQUENCE public.airplane_airplane_id_seq OWNED BY public.airplane.airplane_id;
+
+
+--
+-- Name: airplane_type; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.airplane_type (
+    airplane_type_name character varying(125) NOT NULL,
+    max_seats integer NOT NULL,
+    company character varying(150) NOT NULL,
+    CONSTRAINT airplane_type_max_seats_check CHECK (((max_seats > 0) AND (max_seats <= 600)))
+);
+
+
+ALTER TABLE public.airplane_type OWNER TO carrie;
+
+--
+-- Name: airport; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.airport (
+    airport_code character(3) NOT NULL,
+    name character varying(140) NOT NULL,
+    city character varying(40) NOT NULL,
+    state character(2) NOT NULL
+);
+
+
+ALTER TABLE public.airport OWNER TO carrie;
+
+--
+-- Name: can_land; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.can_land (
+    airplane_type_name character varying(125) NOT NULL,
+    airport_code character(3) NOT NULL
+);
+
+
+ALTER TABLE public.can_land OWNER TO carrie;
+
+--
+-- Name: fare; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.fare (
+    flight_number integer NOT NULL,
+    fare_code character(3) NOT NULL,
+    amount integer NOT NULL,
+    restrictions character varying(50),
+    CONSTRAINT fare_amount_check CHECK (((amount >= 0) AND (amount <= 10000)))
+);
+
+
+ALTER TABLE public.fare OWNER TO carrie;
+
+--
+-- Name: flight; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.flight (
+    flight_number integer NOT NULL,
+    airline character varying(40) NOT NULL,
+    weekdays smallint NOT NULL
+);
+
+
+ALTER TABLE public.flight OWNER TO carrie;
+
+--
+-- Name: flight_flight_number_seq; Type: SEQUENCE; Schema: public; Owner: carrie
+--
+
+CREATE SEQUENCE public.flight_flight_number_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.flight_flight_number_seq OWNER TO carrie;
+
+--
+-- Name: flight_flight_number_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: carrie
+--
+
+ALTER SEQUENCE public.flight_flight_number_seq OWNED BY public.flight.flight_number;
+
+
+--
+-- Name: flight_leg; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.flight_leg (
+    flight_number integer NOT NULL,
+    leg_number integer NOT NULL,
+    departure_airport_code character(3) NOT NULL,
+    scheduled_departure_time time without time zone NOT NULL,
+    arrival_airport_code character(3) NOT NULL,
+    scheduled_arrival_time time without time zone NOT NULL,
+    CONSTRAINT flight_leg_leg_number_check CHECK ((leg_number <= 4))
+);
+
+
+ALTER TABLE public.flight_leg OWNER TO carrie;
+
+--
+-- Name: leg_instance; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.leg_instance (
+    flight_number integer NOT NULL,
+    leg_number integer NOT NULL,
+    legdate date NOT NULL,
+    number_of_available_seats integer NOT NULL,
+    airplane_id integer NOT NULL,
+    departure_airport_code character(3) NOT NULL,
+    departure_time time without time zone NOT NULL,
+    arrival_airport_code character(3) NOT NULL,
+    arrival_time time without time zone NOT NULL,
+    CONSTRAINT leg_instance_leg_number_check CHECK ((leg_number <= 4)),
+    CONSTRAINT leg_instance_legdate_check CHECK ((legdate >= CURRENT_TIMESTAMP)),
+    CONSTRAINT leg_instance_number_of_available_seats_check CHECK (((number_of_available_seats >= 0) AND (number_of_available_seats <= 600)))
+);
+
+
+ALTER TABLE public.leg_instance OWNER TO carrie;
+
+--
+-- Name: seat_reservation; Type: TABLE; Schema: public; Owner: carrie
+--
+
+CREATE TABLE public.seat_reservation (
+    flight_number integer NOT NULL,
+    leg_number integer NOT NULL,
+    seatdate date NOT NULL,
+    seat_number integer NOT NULL,
+    customer_name character varying(150) NOT NULL,
+    customer_phone character varying(150) NOT NULL,
+    CONSTRAINT seat_reservation_leg_number_check CHECK ((leg_number <= 4)),
+    CONSTRAINT seat_reservation_seat_number_check CHECK (((seat_number > 0) AND (seat_number <= 600))),
+    CONSTRAINT seat_reservation_seatdate_check CHECK ((seatdate >= CURRENT_TIMESTAMP))
+);
+
+
+ALTER TABLE public.seat_reservation OWNER TO carrie;
+
+--
+-- Name: airplane airplane_id; Type: DEFAULT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.airplane ALTER COLUMN airplane_id SET DEFAULT nextval('public.airplane_airplane_id_seq'::regclass);
+
+
+--
+-- Name: flight flight_number; Type: DEFAULT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight ALTER COLUMN flight_number SET DEFAULT nextval('public.flight_flight_number_seq'::regclass);
+
+
+--
+-- Data for Name: airplane; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.airplane (airplane_id, total_number_of_seats, airplane_type_name) FROM stdin;
+1	500	UF1
+2	40	UF2
+3	98	SW1
+4	468	AM1
+5	14	AM1
+\.
+
+
+--
+-- Data for Name: airplane_type; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.airplane_type (airplane_type_name, max_seats, company) FROM stdin;
+UF1	50	United
+UF2	500	United
+SW1	324	Southwest
+AM1	45	American
+\.
+
+
+--
+-- Data for Name: airport; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.airport (airport_code, name, city, state) FROM stdin;
+IAD	Dakota	Columbus	DC
+PIT	Dunning	Pittsburgh	PA
+BWI	Rockefeller	Baltimore	MD
+SFO	Dwight	San Franscico	CA
+OMA	Lindbergh	Omaha	NE
+\.
+
+
+--
+-- Data for Name: can_land; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.can_land (airplane_type_name, airport_code) FROM stdin;
+UF1	IAD
+UF1	BWI
+UF1	SFO
+UF1	PIT
+UF1	OMA
+UF2	IAD
+UF2	BWI
+UF2	SFO
+UF2	PIT
+UF2	OMA
+SW1	IAD
+SW1	BWI
+SW1	SFO
+SW1	PIT
+SW1	OMA
+AM1	IAD
+AM1	BWI
+AM1	SFO
+AM1	PIT
+AM1	OMA
+\.
+
+
+--
+-- Data for Name: fare; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.fare (flight_number, fare_code, amount, restrictions) FROM stdin;
+1	USD	100	Smoking Allowed
+1	FRA	1000	\N
+2	USD	564	\N
+3	USD	50	Smoking Allowed
+3	FRA	1660	\N
+4	PES	5555	First class only
+4	DIN	4687	\N
+4	USD	987	\N
+\.
+
+
+--
+-- Data for Name: flight; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.flight (flight_number, airline, weekdays) FROM stdin;
+1	United 189	1
+2	United 2	1
+3	Southwest 19	1
+4	Southwest 9	1
+5	American 23	1
+6	American 23	1
+\.
+
+
+--
+-- Data for Name: flight_leg; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.flight_leg (flight_number, leg_number, departure_airport_code, scheduled_departure_time, arrival_airport_code, scheduled_arrival_time) FROM stdin;
+1	1	BWI	09:50:00	SFO	11:50:00
+2	1	BWI	09:50:00	PIT	11:50:00
+3	1	BWI	09:50:00	IAD	11:50:00
+3	2	IAD	09:50:00	OMA	11:50:00
+4	1	PIT	09:50:00	IAD	11:50:00
+4	2	IAD	09:50:00	SFO	11:50:00
+5	1	SFO	09:50:00	BWI	11:50:00
+6	1	SFO	09:50:00	BWI	11:50:00
+\.
+
+
+--
+-- Data for Name: leg_instance; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.leg_instance (flight_number, leg_number, legdate, number_of_available_seats, airplane_id, departure_airport_code, departure_time, arrival_airport_code, arrival_time) FROM stdin;
+1	1	2018-08-15	234	1	BWI	07:45:00	SFO	06:18:00
+2	1	2018-08-15	1	2	BWI	09:50:00	SFO	11:50:00
+3	1	2018-08-21	14	3	BWI	09:50:00	IAD	11:50:00
+3	2	2018-08-21	14	3	IAD	09:50:00	OMA	11:50:00
+4	1	2018-08-15	66	5	BWI	09:50:00	IAD	11:50:00
+4	2	2018-08-15	5	5	IAD	09:50:00	SFO	11:50:00
+5	1	2018-08-22	58	4	SFO	12:11:00	BWI	23:22:00
+6	1	2018-08-22	32	1	SFO	03:23:00	BWI	09:50:00
+\.
+
+
+--
+-- Data for Name: seat_reservation; Type: TABLE DATA; Schema: public; Owner: carrie
+--
+
+COPY public.seat_reservation (flight_number, leg_number, seatdate, seat_number, customer_name, customer_phone) FROM stdin;
+1	1	2018-08-15	1	Carrie	123-456-7890
+2	1	2018-08-15	3	Carrie	123-456-7890
+2	2	2018-08-15	23	Carrie	123-456-7890
+3	1	2018-08-21	123	Dave	123-456-7890
+4	1	2018-08-17	423	Dave	123-456-7890
+4	2	2018-08-17	3	John	123-456-7890
+5	1	2018-08-17	111	John	123-456-7890
+5	2	2018-08-17	222	John	123-456-7890
+5	3	2018-08-18	333	John	123-456-7890
+\.
+
+
+--
+-- Name: airplane_airplane_id_seq; Type: SEQUENCE SET; Schema: public; Owner: carrie
+--
+
+SELECT pg_catalog.setval('public.airplane_airplane_id_seq', 1, false);
+
+
+--
+-- Name: flight_flight_number_seq; Type: SEQUENCE SET; Schema: public; Owner: carrie
+--
+
+SELECT pg_catalog.setval('public.flight_flight_number_seq', 1, false);
+
+
+--
+-- Name: airplane airplane_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.airplane
+    ADD CONSTRAINT airplane_pkey PRIMARY KEY (airplane_id);
+
+
+--
+-- Name: airplane_type airplane_type_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.airplane_type
+    ADD CONSTRAINT airplane_type_pkey PRIMARY KEY (airplane_type_name);
+
+
+--
+-- Name: airport airport_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.airport
+    ADD CONSTRAINT airport_pkey PRIMARY KEY (airport_code);
+
+
+--
+-- Name: fare fare_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.fare
+    ADD CONSTRAINT fare_pkey PRIMARY KEY (flight_number, fare_code);
+
+
+--
+-- Name: flight_leg flight_leg_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight_leg
+    ADD CONSTRAINT flight_leg_pkey PRIMARY KEY (flight_number, leg_number);
+
+
+--
+-- Name: flight flight_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight
+    ADD CONSTRAINT flight_pkey PRIMARY KEY (flight_number);
+
+
+--
+-- Name: leg_instance leg_instance_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.leg_instance
+    ADD CONSTRAINT leg_instance_pkey PRIMARY KEY (flight_number, leg_number, legdate);
+
+
+--
+-- Name: seat_reservation seat_reservation_pkey; Type: CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.seat_reservation
+    ADD CONSTRAINT seat_reservation_pkey PRIMARY KEY (flight_number, leg_number, seatdate, seat_number);
+
+
+--
+-- Name: airplane airplane_airplane_type_name_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.airplane
+    ADD CONSTRAINT airplane_airplane_type_name_fkey FOREIGN KEY (airplane_type_name) REFERENCES public.airplane_type(airplane_type_name);
+
+
+--
+-- Name: can_land can_land_airplane_type_name_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.can_land
+    ADD CONSTRAINT can_land_airplane_type_name_fkey FOREIGN KEY (airplane_type_name) REFERENCES public.airplane_type(airplane_type_name);
+
+
+--
+-- Name: can_land can_land_airport_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.can_land
+    ADD CONSTRAINT can_land_airport_code_fkey FOREIGN KEY (airport_code) REFERENCES public.airport(airport_code);
+
+
+--
+-- Name: fare fare_flight_number_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.fare
+    ADD CONSTRAINT fare_flight_number_fkey FOREIGN KEY (flight_number) REFERENCES public.flight(flight_number);
+
+
+--
+-- Name: flight_leg flight_leg_arrival_airport_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight_leg
+    ADD CONSTRAINT flight_leg_arrival_airport_code_fkey FOREIGN KEY (arrival_airport_code) REFERENCES public.airport(airport_code);
+
+
+--
+-- Name: flight_leg flight_leg_departure_airport_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight_leg
+    ADD CONSTRAINT flight_leg_departure_airport_code_fkey FOREIGN KEY (departure_airport_code) REFERENCES public.airport(airport_code);
+
+
+--
+-- Name: flight_leg flight_leg_flight_number_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.flight_leg
+    ADD CONSTRAINT flight_leg_flight_number_fkey FOREIGN KEY (flight_number) REFERENCES public.flight(flight_number);
+
+
+--
+-- Name: leg_instance leg_instance_arrival_airport_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.leg_instance
+    ADD CONSTRAINT leg_instance_arrival_airport_code_fkey FOREIGN KEY (arrival_airport_code) REFERENCES public.airport(airport_code);
+
+
+--
+-- Name: leg_instance leg_instance_departure_airport_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.leg_instance
+    ADD CONSTRAINT leg_instance_departure_airport_code_fkey FOREIGN KEY (departure_airport_code) REFERENCES public.airport(airport_code);
+
+
+--
+-- Name: leg_instance leg_instance_flight_number_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.leg_instance
+    ADD CONSTRAINT leg_instance_flight_number_fkey FOREIGN KEY (flight_number) REFERENCES public.flight(flight_number);
+
+
+--
+-- Name: seat_reservation seat_reservation_flight_number_fkey; Type: FK CONSTRAINT; Schema: public; Owner: carrie
+--
+
+ALTER TABLE ONLY public.seat_reservation
+    ADD CONSTRAINT seat_reservation_flight_number_fkey FOREIGN KEY (flight_number) REFERENCES public.flight(flight_number);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
